@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 보안 설정: 인라인 스타일 및 스크립트 허용 -->
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://images.unsplash.com; object-src 'none'; base-uri 'self';">
+  <title>Moment Studio</title>
+ <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-header">
+  <h2>🎨 즐거운 추억을 담아보세요! Moment Studio</h2>
+</div>
+
+<div class="main-layout">
+  <div class="panel">
+    
+    <div class="section">
+      <h3>1. 파일 업로드 (유효성 검사)</h3>
+      <input type="file" id="imageInput" accept="image/png, image/jpeg">
+      <div id="licenseInfo" class="license-box">
+        <strong>출처 및 사용 권한:</strong> <span id="licenseText">기본 그래픽 배경 (본인 제작)</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>2. 화면 비율 선택</h3>
+      <select id="ratioSelect">
+        <option value="1:1">1:1 (정사각형 - 1080x1080)</option>
+        <option value="4:5">4:5 (인스타 피드 - 1080x1350)</option>
+        <option value="9:16">9:16 (스토리/릴스 - 1080x1920)</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <h3>3. 문구 편집 & 극단 입력 검사</h3>
+      <label for="textInput">문구 입력</label>
+      <textarea id="textInput" rows="3">소소한 일상 속,\n작은 행복 찾기 ☕</textarea>
+
+      <div class="grid-2">
+        <div><label for="posX">X 위치 (%)</label><input type="range" id="posX" min="0" max="100" value="50"></div>
+        <div><label for="posY">Y 위치 (%)</label><input type="range" id="posY" min="0" max="100" value="80"></div>
+      </div>
+
+      <div class="grid-3">
+        <div><label for="fontSize">크기 (px)</label><input type="number" id="fontSize" value="40" min="5" max="200"></div>
+        <div><label for="rotation">회전 (도)</label><input type="number" id="rotation" value="0" min="-360" max="360"></div>
+        <div><label for="textColor">글자 색상</label><input type="color" id="textColor" value="#ffffff" class="color-picker"></div>
+      </div>
+
+      <label class="mt-10">잘못된 극단 입력 시뮬레이션</label>
+      <button id="btnExtremeInput" class="btn-test">⚠️ 잘못된 극단 입력 시도 (작업 유지 검증)</button>
+    </div>
+
+    <div class="section">
+      <h3>4. 템플릿 관리 (CRUD & 새로고침 유지)</h3>
+      <input type="text" id="tplName" placeholder="템플릿 이름 입력">
+      <div class="btn-group">
+        <button id="btnSaveTpl">저장/수정</button>
+        <button id="btnDeleteTpl" class="btn-danger">삭제</button>
+      </div>
+      <button id="btnPresetTpl" class="btn-secondary">🚀 기본 템플릿 3개 생성</button>
+      <select id="tplList">
+        <option value="">-- 저장된 템플릿 불러오기 --</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <h3>5. JSON 검증 & 완성 이미지 다운로드</h3>
+      <div class="btn-group">
+        <button id="btnExportJSON" class="btn-secondary">JSON 내보내기</button>
+        <button id="btnImportJSONTrigger" class="btn-secondary">JSON 불러오기</button>
+        <input type="file" id="jsonFileInput" accept=".json" class="hidden">
+      </div>
+      <div class="btn-group mt-6">
+        <button id="btnTestInvalidSyntaxJSON" class="btn-secondary">⚠️ 문법 손상 JSON 테스트</button>
+        <button id="btnTestMissingKeyJSON" class="btn-secondary">⚠️ 필수 누락 JSON 테스트</button>
+      </div>
+      <button id="btnDownloadImage" class="btn-download">🖼️ 완성 이미지 다운로드 (PNG)</button>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+
+  <div class="preview-area">
+    <div class="canvas-wrapper">
+      <canvas id="studioCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

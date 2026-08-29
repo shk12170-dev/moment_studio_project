@@ -1,0 +1,316 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('studioCanvas');
+  const ctx = canvas.getContext('2d');
+  let currentImg = null;
+
+  const state = {
+    ratio: '1:1',
+    text: '소소한 일상 속,\n작은 행복 찾기 ☕',
+    posX: 50,
+    posY: 80,
+    fontSize: 40,
+    rotation: 0,
+    textColor: '#ffffff',
+    attribution: '본인 제작'
+  };
+
+  const REQUIRED_KEYS = ['ratio', 'text', 'posX', 'posY', 'fontSize', 'rotation', 'textColor'];
+
+  const RATIOS = {
+    '1:1': { w: 1080, h: 1080 },
+    '4:5': { w: 1080, h: 1350 },
+    '9:16': { w: 1080, h: 1920 }
+  };
+
+  function showToast(msg, isErr = false) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.className = isErr ? 'toast-error' : 'toast-success';
+    t.innerText = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+
+  function validateAndSanitizeInputs() {
+    let parsedX = parseFloat(state.posX);
+    let parsedY = parseFloat(state.posY);
+    let parsedSize = parseInt(state.fontSize);
+    let parsedRot = parseInt(state.rotation);
+
+    if (isNaN(parsedX)) state.posX = 50;
+    else state.posX = Math.min(100, Math.max(0, parsedX));
+
+    if (isNaN(parsedY)) state.posY = 50;
+    else state.posY = Math.min(100, Math.max(0, parsedY));
+
+    if (isNaN(parsedSize)) state.fontSize = 40;
+    else state.fontSize = Math.min(200, Math.max(5, parsedSize));
+
+    if (isNaN(parsedRot)) state.rotation = 0;
+    else state.rotation = Math.min(360, Math.max(-360, parsedRot));
+
+    if (typeof state.text !== 'string') state.text = '';
+    if (!state.attribution) state.attribution = '본인 제작';
+  }
+
+  function syncInputs() {
+    document.getElementById('ratioSelect').value = state.ratio;
+    document.getElementById('textInput').value = state.text;
+    document.getElementById('posX').value = state.posX;
+    document.getElementById('posY').value = state.posY;
+    document.getElementById('fontSize').value = state.fontSize;
+    document.getElementById('rotation').value = state.rotation;
+    document.getElementById('textColor').value = state.textColor;
+    document.getElementById('licenseText').innerText = state.attribution;
+  }
+
+  function render() {
+    validateAndSanitizeInputs();
+    const dim = RATIOS[state.ratio];
+    canvas.width = dim.w;
+    canvas.height = dim.h;
+
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (currentImg) {
+      const imgRatio = currentImg.width / currentImg.height;
+      const canvasRatio = canvas.width / canvas.height;
+      let rw, rh, ox, oy;
+
+      if (imgRatio > canvasRatio) {
+        rh = canvas.height; rw = canvas.height * imgRatio;
+        ox = (canvas.width - rw) / 2; oy = 0;
+      } else {
+        rw = canvas.width; rh = canvas.width / imgRatio;
+        ox = 0; oy = (canvas.height - rh) / 2;
+      }
+      ctx.drawImage(currentImg, ox, oy, rw, rh);
+    }
+
+    if (state.text) {
+      ctx.save();
+      const targetX = canvas.width * (state.posX / 100);
+      const targetY = canvas.height * (state.posY / 100);
+
+      ctx.translate(targetX, targetY);
+      ctx.rotate((state.rotation * Math.PI) / 180);
+
+      ctx.fillStyle = state.textColor;
+      ctx.font = `bold ${state.fontSize * 2}px 'Pretendard', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 3;
+
+      const lines = state.text.split('\n');
+      const lineHeight = state.fontSize * 2.5;
+      const startY = -((lines.length - 1) * lineHeight) / 2;
+
+      lines.forEach((line, idx) => {
+        ctx.fillText(line, 0, startY + (idx * lineHeight));
+      });
+
+      ctx.restore();
+    }
+  }
+
+  function updateTemplateList() {
+    const list = document.getElementById('tplList');
+    if (!list) return;
+    list.innerHTML = '<option value="">-- 저장된 템플릿 불러오기 --</option>';
+    const store = JSON.parse(localStorage.getItem('moment_studio_tpl') || '{}');
+    Object.keys(store).forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k; 
+      opt.innerText = k;
+      list.appendChild(opt);
+    });
+  }
+
+  // --- 이벤트 리스너 바인딩 ---
+
+  document.getElementById('imageInput')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg'];
+    if (!validTypes.includes(file.type)) {
+      showToast(`❌ [업로드 거부] 지원하지 않는 파일 형식입니다. (${file.type || '알 수 없음'})\nPNG 및 JPEG 파일만 지원됩니다. 기존 작업이 유지됩니다.`, true);
+      e.target.value = '';
+      return; 
+    }
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onload = () => { 
+        currentImg = img; 
+        state.attribution = `외부 업로드 파일 (${file.name}) | 원본 출처: 사용자 제공 파일 | 사용 허가: 사용자 직접 업로드 권한 확인됨`;
+        document.getElementById('licenseText').innerText = state.attribution;
+        render(); 
+        showToast('✅ 이미지가 정상 로드되었습니다.'); 
+      };
+      img.onerror = () => { 
+        showToast('❌ [로드 실패] 손상된 이미지 파일입니다. 기존 작업이 유지됩니다.', true); 
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('ratioSelect')?.addEventListener('change', e => { state.ratio = e.target.value; render(); });
+  document.getElementById('textInput')?.addEventListener('input', e => { state.text = e.target.value; render(); });
+  document.getElementById('posX')?.addEventListener('input', e => { state.posX = e.target.value; render(); });
+  document.getElementById('posY')?.addEventListener('input', e => { state.posY = e.target.value; render(); });
+  document.getElementById('fontSize')?.addEventListener('input', e => { state.fontSize = e.target.value; render(); });
+  document.getElementById('rotation')?.addEventListener('input', e => { state.rotation = e.target.value; render(); });
+  document.getElementById('textColor')?.addEventListener('input', e => { state.textColor = e.target.value; render(); });
+
+  document.getElementById('btnExtremeInput')?.addEventListener('click', () => {
+    const originalText = state.text;
+    try {
+      state.posX = NaN;
+      state.fontSize = -9999;
+      state.rotation = 99999;
+      validateAndSanitizeInputs();
+      syncInputs();
+      render();
+      showToast('🛡️ 잘못된 극단 입력값이 감지되었으나 안전 범위로 자동 보정되었으며 기존 작업 내용이 유지되었습니다.');
+    } catch (err) {
+      state.text = originalText;
+      syncInputs();
+      render();
+      showToast('❌ 오류가 발생하여 기존 편집 상태를 복원했습니다.', true);
+    }
+  });
+
+  document.getElementById('btnSaveTpl')?.addEventListener('click', () => {
+    const nameInput = document.getElementById('tplName');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) return showToast('템플릿 이름을 입력해주세요.', true);
+    const store = JSON.parse(localStorage.getItem('moment_studio_tpl') || '{}');
+    store[name] = { ...state };
+    localStorage.setItem('moment_studio_tpl', JSON.stringify(store));
+    showToast(`'${name}' 템플릿이 저장/수정되었습니다.`);
+    updateTemplateList();
+  });
+
+  document.getElementById('btnDeleteTpl')?.addEventListener('click', () => {
+    const list = document.getElementById('tplList');
+    const name = list ? list.value : '';
+    if (!name) return showToast('삭제할 템플릿을 선택하세요.', true);
+    const store = JSON.parse(localStorage.getItem('moment_studio_tpl') || '{}');
+    delete store[name];
+    localStorage.setItem('moment_studio_tpl', JSON.stringify(store));
+    showToast(`'${name}' 템플릿이 삭제되었습니다.`);
+    updateTemplateList();
+  });
+
+  document.getElementById('btnPresetTpl')?.addEventListener('click', () => {
+    const presets = {
+      "모던 힐링 (1:1)": { ratio: '1:1', text: '지친 하루 끝,\n깊은 휴식 🌿', posX: 50, posY: 80, fontSize: 42, rotation: 0, textColor: '#ffffff', attribution: '본인 제작 (기본 템플릿)' },
+      "인스타 감성 (4:5)": { ratio: '4:5', text: 'DAILY MOMENT ✨', posX: 50, posY: 50, fontSize: 50, rotation: -5, textColor: '#ffd700', attribution: '본인 제작 (기본 템플릿)' },
+      "스토리 카드 (9:16)": { ratio: '9:16', text: '오늘의 기록 📸\n@moment_studio', posX: 50, posY: 85, fontSize: 38, rotation: 0, textColor: '#ffffff', attribution: '본인 제작 (기본 템플릿)' }
+    };
+    localStorage.setItem('moment_studio_tpl', JSON.stringify(presets));
+    updateTemplateList();
+    showToast('🚀 기본 템플릿 3개가 생성되었습니다. (새로고침 후에도 유지됨)');
+  });
+
+  document.getElementById('tplList')?.addEventListener('change', (e) => {
+    const name = e.target.value;
+    if (!name) return;
+    const store = JSON.parse(localStorage.getItem('moment_studio_tpl') || '{}');
+    if (store[name]) {
+      Object.assign(state, store[name]);
+      syncInputs();
+      render();
+      showToast(`'${name}' 템플릿을 불러왔습니다.`);
+    }
+  });
+
+  // JSON 파일 내보내기 (Export)
+  document.getElementById('btnExportJSON')?.addEventListener('click', () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `moment_studio_backup_${Date.now()}.json`);
+    dlAnchor.click();
+    showToast('📄 정상 JSON 파일이 내보내졌습니다.');
+  });
+
+  // JSON 파일 불러오기 클릭 트리거
+  document.getElementById('btnImportJSONTrigger')?.addEventListener('click', () => {
+    document.getElementById('jsonFileInput')?.click();
+  });
+
+  // JSON 파일 읽기 공통 함수 (T-08, T-09)
+  function loadJsonConfigFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+      try {
+        const data = JSON.parse(e.target.result);
+
+        const missingKeys = REQUIRED_KEYS.filter(k => !(k in data));
+if (missingKeys.length > 0 || isNaN(Number(data.fontSize))) {
+  showToast("⚠️ 필수 키가 누락된 잘못된 JSON 구조입니다.", true);
+  return;
+}
+
+        Object.assign(state, data);
+        if (!data.attribution) state.attribution = '본인 제작';
+        syncInputs();
+        render();
+        showToast("✅ JSON 설정을 성공적으로 불러왔습니다.");
+
+      } catch (err) {
+        showToast("❌ 문법이 손상된 올바르지 않은 JSON 파일입니다.", true);
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  // JSON 선택 input 바인딩
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  if (jsonFileInput) {
+    jsonFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      loadJsonConfigFile(file);
+      e.target.value = '';
+    });
+  }
+
+  // 시뮬레이션 테스트 버튼
+  document.getElementById('btnTestInvalidSyntaxJSON')?.addEventListener('click', () => {
+    loadJsonConfigFile(new Blob(["{ ratio: '1:1', text: missingQuotes }"], { type: 'application/json' }));
+  });
+
+  document.getElementById('btnTestMissingKeyJSON')?.addEventListener('click', () => {
+    loadJsonConfigFile(new Blob([JSON.stringify({ wrongKey: "test" })], { type: 'application/json' }));
+  });
+
+// 완성 이미지 다운로드 (T-10)
+const downloadBtn = document.getElementById('btnDownloadImage');
+if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `moment_studio_${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      showToast("📥 메타데이터가 제거된 PNG 이미지가 다운로드되었습니다.");
+    });
+  }
+
+  // 초기 상태 로드 (템플릿 목록 + Canvas 렌더링)
+  updateTemplateList();
+  render();
+});

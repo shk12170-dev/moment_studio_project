@@ -1,0 +1,18 @@
+{
+  "common_limits": {
+    "max_time_minutes": 30,
+    "max_api_calls": 10
+  },
+  "tests": [
+    { "id": "T-01", "input": "PNG 파일 업로드", "expected": "Canvas 배경 이미지 정상 렌더링" },
+    { "id": "T-02", "input": "EXE/TXT 파일 업로드", "expected": "업로드 거부 토스트 출력 및 기존 상태 유지" },
+    { "id": "T-03", "input": "화면 비율 1:1 -> 9:16 변경", "expected": "Canvas 해상도 1080x1920 자동 변경" },
+    { "id": "T-04", "input": "X/Y 위치 슬라이더 조절", "expected": "텍스트 위치 즉시 재계산 및 Canvas 이동" },
+    { "id": "T-05", "input": "<script>alert(1)</script> 입력", "expected": "텍스트로 단순 출력되며 스크립트 실행 안 됨" },
+    { "id": "T-06", "input": "잘못된 극단 입력 클릭", "expected": "안전 범위 자동 보정 및 화면 유지" },
+    { "id": "T-07", "input": "템플릿 저장 버튼 클릭", "expected": "LocalStorage에 키/값 정상 수록" },
+    { "id": "T-08", "input": "손상된 JSON 파일 불러오기", "expected": "파싱 에러 토스트 표시 및 기존 설정 유지" },
+    { "id": "T-09", "input": "필수 키 누락 JSON 불러오기", "expected": "검증 실패 토스트 표시 및 복원 거부" },
+    { "id": "T-10", "input": "완성 이미지 다운로드 클릭", "expected": "EXIF 메타데이터가 0건인 PNG 파일 다운로드" }
+  ]
+}
